@@ -10,6 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.logging.Level;
 
 public class UserService {
     private static Bucket bucket = RateLimitInitializer.getLimitBucket(1,1,Duration.ofHours(1));
@@ -41,6 +42,7 @@ public class UserService {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 return response.body().replace("{", "").replace("}", "").split(":")[1];
             } catch (IOException | InterruptedException e) {
+                LoggerService.log("User SErvice: Could nt recover a user password" + e.getMessage(), Level.SEVERE);
                 throw new RuntimeException(e);
             }
         }

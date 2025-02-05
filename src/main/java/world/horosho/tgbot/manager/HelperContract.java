@@ -16,4 +16,5 @@ public interface HelperContract {
 
     SendMessage notifyUserAboutCommands(Long userID);
 
+    SendMessage saveGroupID(String chatTitle, Long groupID);
 }

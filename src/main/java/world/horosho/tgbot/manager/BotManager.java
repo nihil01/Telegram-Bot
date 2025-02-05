@@ -2,21 +2,24 @@ package world.horosho.tgbot.manager;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.objects.Chat;
+import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import world.horosho.tgbot.database.models.User;
+import world.horosho.tgbot.services.LoggerService;
 import world.horosho.tgbot.services.ResultStatus;
 import world.horosho.tgbot.services.UserService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 
 public class BotManager extends TelegramLongPollingBot {
     private final BotMngrProperties props;
     private final Map<Long, Boolean> waitingForPassword = new HashMap<>();
-
     private HelperContract helperMethods = new HelperMethods();
 
     public BotManager(BotMngrProperties props) {
@@ -25,8 +28,6 @@ public class BotManager extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println(update.getMessage());
-        System.out.println(update.getMessage().getFrom().getId());
         //Dialog processors for user input
         if (update.hasMessage() && update.getMessage().isCommand()){
             String messageText = update.getMessage().getText();
@@ -41,9 +42,15 @@ public class BotManager extends TelegramLongPollingBot {
                     execute(helperMethods.prepareCompanyInfoDialog(userID));
                 }else if (messageText.equalsIgnoreCase("/company_discussion_link")){
                     execute(helperMethods.prepareCompanyDiscussionLinkDialog(userID));
+                }else if (messageText.startsWith("/get_group_id")){
+                    if (update.getMessage().isGroupMessage()){
+                        execute(helperMethods.saveGroupID(
+                                update.getMessage().getChat().getTitle(), update.getMessage().getChatId())
+                        );
+                    }
                 }
             } catch (TelegramApiException e) {
-                System.err.println(e.getMessage());
+                LoggerService.log("BotManager manager warn: SQL QUERY" + e.getMessage(), Level.WARNING);
             }
 
         } else if (update.hasCallbackQuery()){
@@ -87,7 +94,7 @@ public class BotManager extends TelegramLongPollingBot {
 
                 execute(emrp);
             }catch (Exception e){
-                System.err.println(e.getMessage());
+                LoggerService.log("BotManager manager warn: SQL QUERY" + e.getMessage(), Level.WARNING);
             }
         }else{
             //default processor, i.e. /password_reset field input ..
@@ -105,9 +112,9 @@ public class BotManager extends TelegramLongPollingBot {
             }
 
             try {
-                if (!update.getMessage().isGroupMessage()) execute(helperMethods.notifyUserAboutCommands(userID));
-
+                if (!update.getMessage().isGroupMessage())execute(helperMethods.notifyUserAboutCommands(userID));
             } catch (TelegramApiException e) {
+                LoggerService.log("No update" + e.getMessage(), Level.WARNING);
                 throw new RuntimeException(e);
             }
         }
@@ -125,4 +132,5 @@ public class BotManager extends TelegramLongPollingBot {
     public String getBotUsername() {
         return "Orkhan Bot";
     }
+
 }

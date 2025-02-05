@@ -1,8 +1,8 @@
 package world.horosho.tgbot.database.controller;
 import world.horosho.tgbot.database.DatabaseManager;
+import world.horosho.tgbot.database.models.Company;
 import world.horosho.tgbot.database.models.User;
-import world.horosho.tgbot.manager.HelperContract;
-import world.horosho.tgbot.manager.HelperMethods;
+import world.horosho.tgbot.services.LoggerService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class DatabaseController {
 
@@ -30,6 +31,7 @@ public class DatabaseController {
             }
 
         } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
             throw new RuntimeException(e);
         }
         return null;
@@ -46,7 +48,7 @@ public class DatabaseController {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
             return false;
         }
     }
@@ -64,6 +66,7 @@ public class DatabaseController {
             }
             return null;
         } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
             throw new RuntimeException(e);
         }
     }
@@ -91,7 +94,7 @@ public class DatabaseController {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
             throw new RuntimeException(e);
         }
         return data;
@@ -112,8 +115,98 @@ public class DatabaseController {
 
             return null;
         } catch (SQLException exc) {
-            System.err.println(exc.getMessage());
+            LoggerService.log("Error in SQL DB: " + exc.getMessage(), Level.SEVERE);
             throw new RuntimeException(exc);
+        }
+    }
+
+    public static boolean saveChatID(String chatName, Long groupID) {
+        try(Connection con = DatabaseManager.getConnection()){
+            PreparedStatement ps = con.prepareStatement("SELECT telegram_group_id FROM companies WHERE LOWER(name) = ?");
+            ps.setString(1, chatName.toLowerCase());
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                if (rs.getLong("telegram_group_id") != groupID) {
+                    PreparedStatement ps2 = con.prepareStatement("UPDATE companies SET telegram_group_id = ? WHERE LOWER(name) = ?");
+                    ps2.setLong(1,groupID);
+                    ps2.setString(2, chatName.toLowerCase());
+                    ps2.executeUpdate();
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
+            throw new RuntimeException(e);
+        }
+        return false;
+    }
+
+    public static long getGroupID(String chatName) {
+        try(Connection con = DatabaseManager.getConnection()){
+            PreparedStatement ps = con.prepareStatement("SELECT telegram_group_id FROM companies WHERE LOWER(name) = ?");
+            ps.setString(1, chatName.toLowerCase());
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("telegram_group_id");
+            }
+        } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
+            throw new RuntimeException(e);
+        }
+        return -1;
+    }
+
+    public static List<Integer> getAdminsForCompanyMention(String company) {
+        List<Integer> admins = new ArrayList<>();
+        try(Connection con = DatabaseManager.getConnection()){
+            PreparedStatement ps = con.prepareStatement("SELECT \n" +
+                    "    f.id\n" +
+                    "FROM \n" +
+                    "    tgbot_admin_notifications t\n" +
+                    "JOIN \n" +
+                    "    users u \n" +
+                    "    ON TRIM(LOWER(u.credentials)) = TRIM(LOWER(t.groupmessages))\n" +
+                    "JOIN \n" +
+                    "\ttgbot f\n" +
+                    "\tON f.user_phone = u.number\n" +
+                    "WHERE \n" +
+                    "    t.groupmessages IS NOT NULL \n" +
+                    "    AND TRIM(LOWER(t.company)) = ?;\n");
+
+            ps.setString(1, company.toLowerCase());
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                admins.add(rs.getInt("id"));
+            }
+
+        } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
+            throw new RuntimeException(e);
+        }
+
+        return admins;
+    }
+
+    public static List<Company> getCompanies(){
+        List<Company> companiesList = new ArrayList<>();
+        try(Connection con = DatabaseManager.getConnection()){
+            PreparedStatement ps = con.prepareStatement("SELECT name, telegram_group_id FROM companies;");
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+                    companiesList.add(new Company(
+                            rs.getString("name"),
+                            rs.getLong("telegram_group_id"
+                    ))
+                );
+            }
+            return companiesList;
+        } catch (SQLException e) {
+            LoggerService.log("Error in SQL DB: " + e.getMessage(), Level.SEVERE);
+            throw new RuntimeException(e);
         }
     }
 

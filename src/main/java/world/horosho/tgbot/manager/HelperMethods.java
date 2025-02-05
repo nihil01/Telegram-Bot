@@ -6,6 +6,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import world.horosho.tgbot.database.controller.DatabaseController;
 import world.horosho.tgbot.database.models.User;
+import world.horosho.tgbot.services.LoggerService;
 import world.horosho.tgbot.services.RateLimitInitializer;
 import world.horosho.tgbot.services.ResultStatus;
 import world.horosho.tgbot.services.UserService;
@@ -17,6 +18,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,10 +65,10 @@ public class HelperMethods implements HelperContract{
                 }
 
             } catch (IllegalArgumentException e) {
-                System.out.println(e.getMessage());
+                LoggerService.log("Helper methods: Could nt start discussion" + e.getMessage(), Level.WARNING);
             }
         }else{
-            sendMessage.setText("\uD83D\uDE45 Daxil etdiyiniz kod tam deyil! Zəhmət olmasa, web səhifədən daxil olarsız ..");
+            sendMessage.setText("\uD83D\uDE45 Hər vaxtınız xeyir! Zəhmət olmasa, web səhifədə olan kodunu daxil edərsiniz ..");
         }
         return sendMessage;
     }
@@ -137,7 +139,7 @@ public class HelperMethods implements HelperContract{
                 }
                 sendMessage.setText("Təəssüf ki, hesabınız barəsində məlumat tapılmadı. Yəqin ki, səhv qeydiyyatdan keçmisiniz. Əks halda, Admin ilə əlaqə saxlayın");
             } catch (RuntimeException e) {
-                System.out.println(e.getMessage());
+                LoggerService.log("Helper methods: Could nt prepare company info dialog" + e.getMessage(), Level.WARNING);
                 throw new RuntimeException(e);
             }
         }else{
@@ -167,6 +169,7 @@ public class HelperMethods implements HelperContract{
                     sendMessage.setText("Hal-hazırda, şirkətinizin qrupu yaradılmayıb \uD83D\uDE3F. Admin ilə əlaqə saxlayın");
                 }
             } catch (RuntimeException e) {
+                LoggerService.log("Helper methods: Could nt prepare company discussion link dialog" + e.getMessage(), Level.WARNING);
                 throw new RuntimeException(e);
             }
         }else{
@@ -187,7 +190,7 @@ public class HelperMethods implements HelperContract{
 
                 if (user != null) {
                     sendMessage.setText(("Hörmətli %s, zəhmət olmasa menyudan" +
-                            " mənim bacardığım hərəkətlər ilə tanış olarsınız \uD83D\uDC31\uD83D\uDC31").formatted(user.getCredentials()));
+                            " mənim bacardığım hərəkətlər ilə tanış olarsınız \uD83D\uDE04\uD83D\uDE04").formatted(user.getCredentials()));
                 } else {
                     sendMessage.setText("Hörmətli istifadəçi, mən Sizi hələ tanımıram, ona görə Siz web-səhifədən söhbətimizi başlamalısınız !\uD83D\uDE38\uD83D\uDE38");
                 }
@@ -198,9 +201,34 @@ public class HelperMethods implements HelperContract{
 
             return sendMessage;
         } catch (RuntimeException e) {
-            System.err.println(e.getMessage());
+            LoggerService.log("Helper methods: Could nt notify about commands" + e.getMessage(), Level.WARNING);
             throw new RuntimeException(e);
         }
 
+    }
+
+    @Override
+    public SendMessage saveGroupID(String chat, Long id) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(id);
+        try{
+            if (bucket.tryConsume(5)) {
+
+                boolean result = DatabaseController.saveChatID(chat, id);
+
+                if (result) {
+                    sendMessage.setText("Yadda saxladım!");
+                }else{
+                    sendMessage.setText("Uğursuz əməliyyat. Yəqin ki qrupun adı fərqlənir və ya ID artıq saxlanılıb!");
+                }
+
+            } else {
+                sendMessage.setText("Bir az gözləyin ..");
+            }
+        } catch (RuntimeException e) {
+            LoggerService.log("Helper methods: Couldnt save a group ID" + e.getMessage(), Level.WARNING);
+            throw new RuntimeException(e);
+        }
+        return sendMessage;
     }
 }

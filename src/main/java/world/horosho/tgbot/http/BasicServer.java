@@ -70,7 +70,7 @@ public class BasicServer {
                         }else{
                             dataBroadcaster
                                 .groupBroadcast(dto,
-                                "‼️Kategoriya dəyişən sənəd-hesabat:\n <s>Yeni</s> >>>>>  <b>İcrada olan</b>\n    Yükləyən əməkdaş: "+dto.getAuthor()+"\n    Müəssisə: "+dto.getCorporation()+"\n    Kategoriya: "+dto.getCategory()+"\n    Təsdiq eliyən baş admin: "+dto.getHeadAdminName()+"\n"+ (dto.getLink() != null ? DataBroadcaster.generateLink(dto.getLink()) : "") + "\n" + mentions);
+                                "‼️Kategoriya dəyişən sənəd-hesabat:\n <s>Yeni</s> >>>>>  <b>İcrada olan</b>\n    Yükləyən əməkdaş: "+dto.getAuthor()+"\n    Müəssisə: "+dto.getCorporation()+"\n    Kategoriya: "+dto.getCategory()+"\n" + (dto.getLink() != null ? DataBroadcaster.generateLink(dto.getLink()) : "") + "\n" + mentions);
                         }
                     }
                     case "Göndərilmişlər" ->
